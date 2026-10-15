@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail
+trap 'echo "::error::COMMAND FAILED (exit $?): ${BASH_COMMAND}"' ERR
 cd "$(dirname "$0")/.."
 
 ARCH="$(uname -m)"
