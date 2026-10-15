@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Amu Music 音频转换器</title>
+<style>
+:root{
+  --brand:#7C5CFC; --brand-deep:#6a48f0; --brand-grad:linear-gradient(135deg,#8b6bff,#6a48f0);
+  --bg:#f4f3f8; --panel:#ffffff; --line:#e9e7f2; --txt:#2a2540; --txt2:#8a86a0;
+  --ok:#22c55e; --warn:#f59e0b; --err:#ef4444; --stop:#9ca3af;
+  --row-hover:#f7f5ff; --input-bg:#ffffff; --input-line:#e2dfee; --shadow:0 2px 12px rgba(80,60,160,.08);
+}
+html[data-theme="dark"]{
+  --bg:#171522; --panel:#211e30; --line:#332f47; --txt:#ece9f7; --txt2:#8f8aa8;
+  --row-hover:#2a2640; --input-bg:#2a2740; --input-line:#3c3854; --shadow:0 2px 12px rgba(0,0,0,.35);
+}
+/* ===== 颜色风格（主题色）=====
+   每套风格只覆盖品牌三色 + 亮色模式下的行悬停色；深色模式的行悬停色由上面统一控制 */
+html[data-accent="purple"]{ --brand:#7C5CFC; --brand-deep:#6a48f0; --brand-grad:linear-gradient(135deg,#8b6bff,#6a48f0); }
+html:not([data-theme="dark"])[data-accent="purple"]{ --row-hover:#f7f5ff; }
+html[data-accent="blue"]{ --brand:#2f7cf6; --brand-deep:#2563eb; --brand-grad:linear-gradient(135deg,#5aa0ff,#2563eb); }
+html:not([data-theme="dark"])[data-accent="blue"]{ --row-hover:#eef4ff; }
+html[data-accent="green"]{ --brand:#10b981; --brand-deep:#059669; --brand-grad:linear-gradient(135deg,#34d399,#059669); }
+html:not([data-theme="dark"])[data-accent="green"]{ --row-hover:#e9faf3; }
+html[data-accent="rose"]{ --brand:#ec4899; --brand-deep:#db2777; --brand-grad:linear-gradient(135deg,#f472b6,#db2777); }
+html:not([data-theme="dark"])[data-accent="rose"]{ --row-hover:#fdeef6; }
+html[data-accent="orange"]{ --brand:#f59e0b; --brand-deep:#d97706; --brand-grad:linear-gradient(135deg,#fbbf24,#d97706); }
+html:not([data-theme="dark"])[data-accent="orange"]{ --row-hover:#fdf5e6; }
+html[data-accent="cyan"]{ --brand:#06b6d4; --brand-deep:#0891b2; --brand-grad:linear-gradient(135deg,#22d3ee,#0891b2); }
+html:not([data-theme="dark"])[data-accent="cyan"]{ --row-hover:#e8f9fc; }
+*{box-sizing:border-box;margin:0;padding:0;user-select:none}
+html,body{height:100%}
+body{font-family:"Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);
+     color:var(--txt);font-size:13px;display:flex;flex-direction:column;overflow:hidden}
+button{font-family:inherit;cursor:pointer;border:none;background:none;font-size:13px;color:var(--txt)}
+input,select{font-family:inherit;font-size:13px;color:var(--txt)}
+
+/* ===== 顶栏 ===== */
+.topbar{height:52px;background:var(--brand-grad);display:flex;align-items:center;padding:0 16px;
+        color:#fff;flex:none;gap:12px}
+.logo{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;
+      align-items:center;justify-content:center;font-weight:700;font-size:16px;flex:none}
+.brand{font-size:19px;font-weight:700;letter-spacing:.5px}
+.topbar .divider{width:1px;height:22px;background:rgba(255,255,255,.35)}
+.subtitle{font-size:13px;opacity:.92}
+.topbar .spacer{flex:1}
+.theme-btn{color:#fff;font-size:18px;padding:4px 8px;border-radius:6px;opacity:.9}
+.theme-btn:hover{background:rgba(255,255,255,.15)}
+
+/* ===== 工具栏 ===== */
+.toolbar{display:flex;align-items:center;gap:10px;padding:12px 16px 10px;flex:none}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;
+     background:var(--panel);border:1px solid var(--input-line);box-shadow:var(--shadow);transition:.15s}
+.btn:hover{border-color:var(--brand);color:var(--brand)}
+.btn.purple{color:var(--brand)}
+.btn.danger{color:var(--err)}
+.btn.danger:hover{border-color:var(--err)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.toolbar .spacer{flex:1}
+.search{width:180px;padding:7px 12px;border-radius:8px;border:1px solid var(--input-line);
+        background:var(--input-bg);outline:none}
+.search:focus{border-color:var(--brand)}
+.status-filter{padding:7px 10px;border-radius:8px;border:1px solid var(--input-line);
+               background:var(--input-bg);outline:none}
+.task-count{color:var(--txt2);white-space:nowrap}
+
+/* ===== 主体 ===== */
+.main{flex:1;display:flex;gap:12px;padding:0 16px 12px;min-height:0}
+.table-card{flex:1;background:var(--panel);border-radius:12px;box-shadow:var(--shadow);
+            display:flex;flex-direction:column;min-width:0;overflow:hidden;position:relative}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+thead th{font-weight:600;color:var(--txt2);text-align:left;padding:12px 10px;font-size:12.5px;
+         border-bottom:1px solid var(--line);white-space:nowrap;background:var(--panel);position:sticky;top:0;z-index:2}
+tbody td{padding:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+tbody tr{border-bottom:1px solid var(--line)}
+tbody tr:hover{background:var(--row-hover)}
+tbody tr.selected{background:var(--row-hover)}
+.table-wrap{flex:1;overflow-y:auto}
+.col-idx{width:44px;color:var(--txt2)}
+.col-name{width:auto}
+.col-fmt{width:70px}.col-size{width:80px}.col-dur{width:76px}
+.col-br{width:86px}.col-sr{width:86px}.col-ch{width:60px}
+.col-status{width:170px}.col-op{width:110px;text-align:center}
+.cell-sub{color:var(--txt2);font-size:11.5px;display:block;margin-top:2px}
+.op-btn{padding:4px 7px;border-radius:6px;font-size:14px;color:var(--txt2)}
+.op-btn:hover{background:var(--row-hover);color:var(--brand)}
+.op-btn.del:hover{color:var(--err)}
+
+/* 状态徽标 */
+.st{display:inline-flex;align-items:center;gap:6px;font-size:12.5px}
+.st .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.st.waiting{color:var(--txt2)}.st.waiting .dot{background:var(--stop)}
+.st.converting{color:var(--brand)}.st.converting .dot{background:var(--brand);animation:pulse 1s infinite}
+.st.success{color:var(--ok)}.st.success .dot{background:var(--ok)}
+.st.failed{color:var(--err)}.st.failed .dot{background:var(--err)}
+.st.stopped{color:var(--warn)}.st.stopped .dot{background:var(--warn)}
+@keyframes pulse{50%{opacity:.35}}
+.pbar{height:4px;border-radius:2px;background:var(--line);margin-top:5px;overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--brand-grad);border-radius:2px;transition:width .3s}
+
+/* 空状态 */
+.empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+       justify-content:center;gap:8px;color:var(--txt2);pointer-events:none;background:var(--panel)}
+.empty .icon{font-size:52px;opacity:.4}
+.empty b{font-size:15px;color:var(--txt)}
+.empty span{font-size:12.5px}
+
+/* 拖拽遮罩 */
+.drop-mask{position:absolute;inset:0;border:2px dashed var(--brand);border-radius:12px;
+           background:rgba(124,92,252,.08);display:none;align-items:center;justify-content:center;
+           font-size:16px;color:var(--brand);z-index:5;font-weight:600}
+.table-card.dragging .drop-mask{display:flex}
+
+/* ===== 右侧参数面板 ===== */
+.side{width:230px;flex:none;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+.field label{display:block;font-size:12.5px;color:var(--txt2);margin-bottom:6px}
+.field select{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--input-line);
+              background:var(--input-bg);outline:none}
+.field select:focus{border-color:var(--brand)}
+.field .lab{display:flex;justify-content:space-between;align-items:center}
+.field .lab a{color:var(--brand);font-size:12px;cursor:pointer;text-decoration:none}
+
+/* 表头排序 */
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover{color:var(--brand)}
+th .arrow{font-size:10px;color:var(--brand)}
+.stepper{display:flex;align-items:center;border:1px solid var(--input-line);border-radius:8px;
+         background:var(--input-bg);overflow:hidden}
+.stepper button{width:34px;height:34px;font-size:16px;color:var(--txt2);flex:none}
+.stepper button:hover{color:var(--brand);background:var(--row-hover)}
+.stepper .val{flex:1;text-align:center;font-weight:600}
+.range{width:100%;accent-color:var(--brand);margin:4px 0}
+
+/* ===== 底部状态栏 ===== */
+.bottombar{flex:none;display:flex;align-items:center;gap:14px;padding:10px 16px;
+           border-top:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+.counts{display:flex;gap:14px;font-size:12.5px;color:var(--txt2);flex-wrap:wrap}
+.counts .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.counts b{color:var(--txt)}
+.bottombar .spacer{flex:1}
+.chk{display:inline-flex;align-items:center;gap:6px;color:var(--txt2);cursor:pointer;white-space:nowrap}
+.chk input{accent-color:var(--brand);width:14px;height:14px;cursor:pointer}
+.outdir{display:flex;align-items:center;gap:6px;background:var(--input-bg);border:1px solid var(--input-line);
+        border-radius:8px;padding:6px 8px;max-width:280px}
+.outdir .path{flex:1;font-size:12px;color:var(--txt2);overflow:hidden;text-overflow:ellipsis;
+              white-space:nowrap;direction:rtl;text-align:left;cursor:pointer;user-select:none}
+.outdir .ic{color:var(--warn);cursor:pointer}
+.outdir .ic:hover{color:var(--brand)}
+.workers{display:flex;align-items:center;gap:2px;border:1px solid var(--input-line);border-radius:8px;
+         padding:2px 4px;background:var(--input-bg)}
+.workers button{width:26px;height:26px;color:var(--txt2);font-size:15px}
+.workers button:hover{color:var(--brand)}
+.workers .val{min-width:34px;text-align:center;font-weight:600;font-size:12.5px}
+.start-btn{background:var(--brand-grad);color:#fff;padding:9px 22px;border-radius:8px;font-size:14px;
+           font-weight:600;box-shadow:0 2px 10px rgba(106,72,240,.35);transition:.15s;white-space:nowrap}
+.start-btn:hover{filter:brightness(1.08)}
+.start-btn.stop{background:linear-gradient(135deg,#f87171,#ef4444);box-shadow:0 2px 10px rgba(239,68,68,.35)}
+
+/* toast */
+#toast{position:fixed;top:64px;right:18px;z-index:99;display:flex;flex-direction:column;gap:8px}
+.toast-item{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--ok);
+            box-shadow:0 4px 16px rgba(0,0,0,.15);border-radius:8px;padding:10px 14px;font-size:13px;
+            animation:slidein .25s;max-width:300px}
+.toast-item.err{border-left-color:var(--err)}
+@keyframes slidein{from{transform:translateX(30px);opacity:0}}
+
+/* ===== 主题色弹出面板 ===== */
+.theme-wrap{position:relative}
+.accent-pop{position:absolute;top:40px;right:0;background:var(--panel);border:1px solid var(--line);
+            border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:12px 14px;z-index:98;
+            display:none;width:196px}
+.accent-pop.open{display:block}
+.accent-pop-title{font-size:12px;color:var(--txt2);margin-bottom:9px}
+.accent-row{display:flex;gap:8px;flex-wrap:wrap}
+.accent-dot{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;
+            display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;
+            transition:transform .12s}
+.accent-dot:hover{transform:scale(1.12)}
+.accent-dot.active{border-color:var(--txt);box-shadow:0 0 0 2px var(--panel) inset}
+.accent-name{margin-top:9px;font-size:12px;color:var(--txt)}
+
+/* ===== 播放器（波形进度条） ===== */
+.player{flex:none;display:flex;align-items:center;gap:10px;padding:8px 16px;
+        background:var(--panel);border-top:1px solid var(--line);height:58px}
+.player.hide{display:none}
+.pl-toggle{width:34px;height:34px;border-radius:50%;background:var(--brand-grad);color:#fff;
+           font-size:14px;flex:none;display:flex;align-items:center;justify-content:center;
+           transition:transform .12s}
+.pl-toggle:hover{transform:scale(1.08)}
+.pl-info{width:150px;flex:none;overflow:hidden}
+.pl-name{font-size:12px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-sub{font-size:11px;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-wave{flex:1;height:40px;min-width:0;cursor:pointer}
+.pl-time{font-size:11.5px;color:var(--txt2);flex:none;font-variant-numeric:tabular-nums}
+.pl-close{color:var(--txt2);font-size:14px;padding:5px 7px;border-radius:6px;flex:none}
+.pl-close:hover{background:var(--row-hover);color:var(--err)}
+
+/* ===== 积分版：用户徽章 / 费用提示 / 登录门 ===== */
+.userchip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);
+          border-radius:999px;padding:4px 6px 4px 12px;font-size:12.5px;color:#fff;max-width:260px}
+.userchip .uc-name{max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.userchip .uc-pts{background:rgba(255,255,255,.22);border-radius:999px;padding:2px 9px;
+                  font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.userchip .uc-out{border:none;background:rgba(255,255,255,.22);color:#fff;width:22px;height:22px;
+                  border-radius:50%;cursor:pointer;font-size:11px;line-height:1;flex:none}
+.userchip .uc-out:hover{background:rgba(255,255,255,.4)}
+.cost-hint{color:var(--txt2);font-size:12px;margin-right:2px;white-space:nowrap}
+.cost-hint b{color:var(--brand)}
+.cost-hint.lack{color:var(--err)}
+.gate-mask{position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,#f3efff,#e8e2ff 55%,#dcd2ff);
+           display:flex;align-items:center;justify-content:center}
+html[data-theme="dark"] .gate-mask{background:linear-gradient(160deg,#171425,#1d1830 55%,#241d3d)}
+.gate-card{width:360px;background:var(--panel);border:1px solid var(--line);border-radius:16px;
+           box-shadow:0 18px 60px rgba(60,30,140,.25);padding:30px 30px 22px;text-align:center}
+.gate-logo{width:54px;height:54px;margin:0 auto 12px;border-radius:50%;background:var(--brand-grad);
+           color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.gate-title{font-size:17px;font-weight:700;color:var(--txt)}
+.gate-sub{font-size:12.5px;color:var(--txt2);margin:7px 0 18px;line-height:1.6}
+.gate-card input{width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:10px;border:1px solid var(--line);
+                 border-radius:9px;font-size:13.5px;background:var(--input-bg);color:var(--txt);outline:none}
+.gate-card input:focus{border-color:var(--brand)}
+.gate-err{min-height:17px;font-size:12.5px;color:var(--err);margin-bottom:6px;line-height:1.5}
+.gate-btn{width:100%;padding:11px;border:none;border-radius:9px;background:var(--brand-grad);color:#fff;
+          font-size:14.5px;font-weight:700;cursor:pointer;letter-spacing:4px}
+.gate-btn:hover{filter:brightness(1.08)}
+.gate-btn:disabled{opacity:.55;cursor:default}
+.gate-foot{margin-top:14px;font-size:12px;color:var(--txt2)}
+.gate-foot a{color:var(--brand);text-decoration:none;cursor:pointer}
+.gate-foot a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">A</div>
+  <div class="brand">Amu Music</div>
+  <div class="divider"></div>
+  <div class="subtitle">音频转换器 <span id="ver">V1.0</span> by Amu Music</div>
+  <div class="spacer"></div>
+  <div class="userchip" id="userChip" style="display:none">
+    <span class="uc-name" id="ucName"></span>
+    <span class="uc-pts">💎 <b id="ucPts">0</b></span>
+    <button class="uc-out" id="btnLogout" title="退出登录">⏻</button>
+  </div>
+  <div class="theme-wrap">
+    <button class="theme-btn" id="accentBtn" title="颜色风格">🎨</button>
+    <button class="theme-btn" id="themeBtn" title="切换深色模式">🌙</button>
+    <div class="accent-pop" id="accentPop">
+      <div class="accent-pop-title">选择颜色风格</div>
+      <div class="accent-row" id="accentRow"></div>
+      <div class="accent-name" id="accentName"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <button class="btn purple" id="btnAddFiles">📄 添加文件</button>
+  <button class="btn purple" id="btnAddFolder">📁 添加文件夹</button>
+  <button class="btn danger" id="btnClear">🗑 清空列表</button>
+  <div class="spacer"></div>
+  <input class="search" id="search" placeholder="搜索文件名...">
+  <select class="status-filter" id="statusFilter">
+    <option value="all">全部状态</option>
+    <option value="waiting">等待中</option>
+    <option value="converting">转换中</option>
+    <option value="success">成功</option>
+    <option value="failed">失败</option>
+    <option value="stopped">已停止</option>
+  </select>
+  <span class="task-count" id="taskCount">0 个任务</span>
+</div>
+
+<div class="main">
+  <div class="table-card" id="dropZone">
+    <div class="table-wrap">
+      <table>
+        <colgroup>
+          <col class="col-idx"><col class="col-name"><col class="col-fmt"><col class="col-size">
+          <col class="col-dur"><col class="col-br"><col class="col-sr"><col class="col-ch">
+          <col class="col-status"><col class="col-op">
+        </colgroup>
+        <thead><tr>
+          <th>#</th>
+          <th class="sortable" data-k="name">文件名<span class="arrow"></span></th>
+          <th class="sortable" data-k="format">格式<span class="arrow"></span></th>
+          <th class="sortable" data-k="size">大小<span class="arrow"></span></th>
+          <th class="sortable" data-k="duration">时长<span class="arrow"></span></th>
+          <th class="sortable" data-k="bitrate">比特率<span class="arrow"></span></th>
+          <th class="sortable" data-k="sample_rate">采样率<span class="arrow"></span></th>
+          <th class="sortable" data-k="channels">声道<span class="arrow"></span></th>
+          <th class="sortable" data-k="status">状态<span class="arrow"></span></th>
+          <th style="text-align:center">操作</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty">
+      <div class="icon">🎵</div>
+      <b>暂无任务</b>
+      <span>点击上方"添加文件"按钮或直接拖拽文件到此处</span>
+    </div>
+    <div class="drop-mask">松开鼠标添加文件</div>
+  </div>
+
+  <div class="side">
+    <div class="field"><label>输出格式</label><select id="optFormat"></select></div>
+    <div class="field"><label>输出质量（比特率）</label><select id="optBitrate"></select></div>
+    <div class="field"><label>采样率</label><select id="optSampleRate"></select></div>
+    <div class="field"><label>声道</label><select id="optChannels"></select></div>
+    <div class="field"><label>音量</label>
+      <div class="stepper">
+        <button id="volMinus">−</button><span class="val" id="volVal">100%</span><button id="volPlus">+</button>
+      </div>
+    </div>
+    <div class="field"><label>播放速度</label>
+      <div class="stepper">
+        <button id="speedMinus">−</button><span class="val" id="speedVal">1.00x</span><button id="speedPlus">+</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="player hide" id="player">
+  <button class="pl-toggle" id="plToggle" title="播放/暂停">⏸</button>
+  <div class="pl-info">
+    <div class="pl-name" id="plName"></div>
+    <div class="pl-sub" id="plSub"></div>
+  </div>
+  <canvas class="pl-wave" id="plWave"></canvas>
+  <span class="pl-time" id="plTime">0:00 / 0:00</span>
+  <button class="pl-close" id="plClose" title="关闭播放器">✕</button>
+</div>
+
+<div class="bottombar">
+  <div class="counts" id="counts"></div>
+  <div class="spacer"></div>
+  <label class="chk"><input type="checkbox" id="chkSourceDir">源目录</label>
+  <div class="outdir">
+    <span class="path" id="outDirPath" title="点击修改输出目录"></span>
+    <span class="ic" id="btnOpenOut" title="打开输出目录">📂</span>
+  </div>
+  <label class="chk"><input type="checkbox" id="chkNotify" checked>完成通知</label>
+  <label class="chk"><input type="checkbox" id="chkAutoOpen" checked>转换后打开文件夹</label>
+  <span style="color:var(--txt2);font-size:12.5px">同时转换</span>
+  <div class="workers">
+    <button id="workersMinus">−</button><span class="val" id="workersVal">3</span><button id="workersPlus">+</button>
+  </div>
+  <span class="cost-hint" id="costHint" style="display:none"></span>
+  <button class="start-btn" id="btnStart">▶ 开始转换</button>
+</div>
+
+<div id="toast"></div>
+
+<!-- 积分版登录门（未登录时遮罩全屏） -->
+<div class="gate-mask" id="gateMask" style="display:none">
+  <div class="gate-card">
+    <div class="gate-logo">A</div>
+    <div class="gate-title">Amu Music 音频转换器 · 积分版</div>
+    <div class="gate-sub">登录 Amu 账号后使用<br>每转换 <b>1 个音频</b> 消耗 <b>10 积分</b>（转换失败不扣分）</div>
+    <input id="gateEmail" type="email" placeholder="邮箱" autocomplete="username">
+    <input id="gatePwd" type="password" placeholder="密码" autocomplete="current-password">
+    <div class="gate-err" id="gateErr"></div>
+    <button class="gate-btn" id="gateLoginBtn">登 录</button>
+    <div class="gate-foot">没有账号？<a id="gateReg">注册会员（注册送 100 积分）</a></div>
+  </div>
+</div>
+
+<script>
+let STATE = {tasks: [], settings: {}, running: false, options: {}};
+let wasRunning = false;
+let sortKey = null, sortDir = 1;   // 表格排序
+
+const $ = id => document.getElementById(id);
+
+/* ---------- 初始化下拉框 ---------- */
+function initOptions(opts){
+  fill("optFormat", opts.formats);
+  fill("optBitrate", opts.bitrates);
+  fill("optSampleRate", opts.sample_rates);
+  fill("optChannels", opts.channels);
+}
+function fill(id, arr){
+  const el = $(id);
+  el.innerHTML = arr.map(v => `<option value="${v}">${v}</option>`).join("");
+}
+
+/* ---------- 渲染 ---------- */
+function fmtSize(n){
+  if (!n) return "-";
+  if (n > 1048576) return (n/1048576).toFixed(2) + " MB";
+  if (n > 1024) return (n/1024).toFixed(1) + " KB";
+  return n + " B";
+}
+function fmtDur(s){
+  if (!s) return "-";
+  s = Math.round(s);
+  const m = Math.floor(s/60), r = s%60;
+  return m + ":" + String(r).padStart(2,"0");
+}
+function fmtBr(n){ return n ? Math.round(n/1000) + " kbps" : "-"; }
+function fmtSr(n){ return n ? (n/1000).toFixed(1).replace(/\.0$/,"") + " kHz" : "-"; }
+function fmtCh(n){
+  if (!n) return "-";
+  return n === 1 ? "单声道" : n === 2 ? "立体声" : n + " 声道";
+}
+const ST_TXT = {waiting:"等待中", converting:"转换中", success:"成功", failed:"失败", stopped:"已停止"};
+
+function render(){
+  const kw = $("search").value.trim().toLowerCase();
+  const st = $("statusFilter").value;
+  let list = STATE.tasks.filter(t =>
+    (!kw || t.name.toLowerCase().includes(kw)) &&
+    (st === "all" || t.status === st));
+
+  /* 排序 */
+  if (sortKey){
+    const STATUS_ORD = {converting:0, waiting:1, success:2, stopped:3, failed:4};
+    const val = t => {
+      const m = t.meta || {};
+      if (sortKey === "status") return STATUS_ORD[t.status] ?? 9;
+      if (sortKey === "name") return t.name.toLowerCase();
+      if (sortKey === "format") return m.format || "";
+      const v = m[sortKey];
+      return (v === undefined || v === null) ? -1 : v;
+    };
+    list = list.slice().sort((a, b) => {
+      const va = val(a), vb = val(b);
+      if (typeof va === "string") return va.localeCompare(vb, "zh") * sortDir;
+      return (va - vb) * sortDir;
+    });
+  }
+
+  /* 排序箭头 */
+  document.querySelectorAll("th.sortable").forEach(th => {
+    th.querySelector(".arrow").textContent =
+      th.dataset.k === sortKey ? (sortDir > 0 ? "▲" : "▼") : "";
+  });
+
+  $("tbody").innerHTML = list.map((t, i) => {
+    const m = t.meta || {};
+    let statusCell;
+    if (t.status === "converting"){
+      statusCell = `<div class="st converting"><span class="dot"></span>转换中 ${t.progress}%` +
+        (t.speed_text ? ` <span style="color:var(--txt2);font-size:11px">${t.speed_text}</span>` : "") +
+        `<div class="pbar"><i style="width:${t.progress}%"></i></div></div>`;
+    } else if (t.status === "failed"){
+      statusCell = `<div class="st failed" title="${(t.error||"").replace(/"/g,"&quot;")}"><span class="dot"></span>失败</div>`;
+    } else {
+      statusCell = `<div class="st ${t.status}"><span class="dot"></span>${ST_TXT[t.status]||t.status}</div>`;
+    }
+    let ops = "";
+    if (t.status !== "converting")
+      ops += `<button class="op-btn" title="播放" onclick="playFile('${t.id}')">▶</button>`;
+    ops += `<button class="op-btn" title="打开源文件夹" onclick="revealSource('${t.id}')">📁</button>`;
+    if (t.status === "success" && t.out_path)
+      ops += `<button class="op-btn" title="打开输出文件夹" onclick="revealFile('${t.id}')">📂</button>`;
+    if (t.status === "failed" || t.status === "stopped" || t.status === "success")
+      ops += `<button class="op-btn" title="重新转换" onclick="retryTask('${t.id}')">🔄</button>`;
+    if (t.status !== "converting")
+      ops += `<button class="op-btn del" title="移除" onclick="removeTask('${t.id}')">✕</button>`;
+    return `<tr>
+      <td class="col-idx">${i+1}</td>
+      <td class="col-name">${esc(t.name)}${m.title || m.artist ? `<span class="cell-sub" title="歌曲标签信息">🎵 ${esc([m.title, m.artist].filter(Boolean).join(" - "))}</span>` : ""}<span class="cell-sub">${esc(shortPath(t.path))}</span></td>
+      <td class="col-fmt">${m.format||"-"}</td>
+      <td class="col-size">${fmtSize(m.size)}</td>
+      <td class="col-dur">${fmtDur(m.duration)}</td>
+      <td class="col-br">${fmtBr(m.bitrate)}</td>
+      <td class="col-sr">${fmtSr(m.sample_rate)}</td>
+      <td class="col-ch">${fmtCh(m.channels)}</td>
+      <td class="col-status">${statusCell}</td>
+      <td class="col-op">${ops}</td>
+    </tr>`;
+  }).join("");
+
+  $("empty").style.display = STATE.tasks.length ? "none" : "flex";
+  $("taskCount").textContent = STATE.tasks.length + " 个任务";
+
+  /* 底部计数 */
+  const c = {waiting:0, converting:0, success:0, failed:0, stopped:0};
+  STATE.tasks.forEach(t => c[t.status] !== undefined && c[t.status]++);
+  const dots = {waiting:"#9ca3af", converting:"#7C5CFC", success:"#22c55e", failed:"#ef4444", stopped:"#f59e0b"};
+  $("counts").innerHTML =
+    `<span><span class="dot" style="background:${dots.waiting}"></span>等待: <b>${c.waiting}</b></span>` +
+    `<span><span class="dot" style="background:${dots.converting}"></span>转换中: <b>${c.converting}</b></span>` +
+    `<span><span class="dot" style="background:${dots.success}"></span>成功: <b>${c.success}</b></span>` +
+    `<span><span class="dot" style="background:${dots.failed}"></span>失败: <b>${c.failed}</b></span>` +
+    `<span><span class="dot" style="background:${dots.stopped}"></span>已停止: <b>${c.stopped}</b></span>`;
+
+  /* 开始/停止按钮 */
+  const btn = $("btnStart");
+  if (STATE.running){
+    btn.textContent = "■ 停止转换";
+    btn.classList.add("stop");
+  } else {
+    btn.textContent = "▶ 开始转换";
+    btn.classList.remove("stop");
+  }
+
+  /* 积分版：登录门 / 用户徽章 / 费用提示 */
+  const isPts = STATE.edition === "points";
+  $("ver").textContent = isPts ? "V1.0 积分版" : "V1.0";
+  $("gateMask").style.display = (isPts && !STATE.user) ? "flex" : "none";
+  $("userChip").style.display = (isPts && STATE.user) ? "flex" : "none";
+  if (isPts && STATE.user){
+    $("ucName").textContent = STATE.user.nickname || STATE.user.email || "";
+    $("ucPts").textContent = STATE.user.points ?? 0;
+    const hint = $("costHint");
+    if (STATE.running){ hint.style.display = "none"; }
+    else {
+      hint.style.display = "inline";
+      const waitCnt = STATE.tasks.filter(t => t.status === "waiting").length;
+      const bal = STATE.user.points || 0;
+      if (waitCnt > 0){
+        const cost = waitCnt * (STATE.costPerFile || 0);
+        const lack = bal < cost;
+        hint.classList.toggle("lack", lack);
+        hint.innerHTML = `💎 本次 ${waitCnt} 个 · 消耗 <b>${cost}</b> 积分（余额 ${bal}）`;
+      } else {
+        hint.classList.remove("lack");
+        hint.innerHTML = `💎 每个音频 ${STATE.costPerFile || 0} 积分 · 余额 <b>${bal}</b>`;
+      }
+    }
+  }
+
+  /* 完成通知 */
+  if (wasRunning && !STATE.running && $("chkNotify").checked){
+    pywebview.api.notify_info().then(showDoneToast);
+  }
+  wasRunning = STATE.running;
+
+  /* 同步设置面板（仅在非聚焦时避免打断选择） */
+  const s = STATE.settings;
+  syncSelect("optFormat", s.format);
+  syncSelect("optBitrate", s.bitrate);
+  syncSelect("optSampleRate", s.sample_rate);
+  syncSelect("optChannels", s.channels);
+  $("volVal").textContent = (s.volume || 100) + "%";
+  $("speedVal").textContent = (s.speed || 1).toFixed(2) + "x";
+  $("workersVal").textContent = s.workers === "自动"
+    ? "自动(" + (STATE.autoWorkers || "?") + ")" : s.workers;
+  $("chkSourceDir").checked = !!s.use_source_dir;
+  $("chkNotify").checked = !!s.notify_done;
+  $("chkAutoOpen").checked = !!s.auto_open_folder;
+  if (document.activeElement !== $("outDirInput")){
+    $("outDirPath").textContent = "..." + (s.output_dir || "").slice(-32);
+    $("outDirPath").title = s.output_dir || "";
+  }
+}
+function syncSelect(id, val){
+  const el = $(id);
+  if (document.activeElement !== el && val !== undefined && el.value !== val) el.value = val;
+}
+function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function shortPath(p){
+  p = p || "";
+  const parts = p.split(/[\\/]/);
+  return parts.length > 3 ? parts[0] + "\\...\\" + parts.slice(-2).join("\\") : p;
+}
+
+/* ---------- 操作 ---------- */
+window.addFiles = () => pywebview.api.add_files_dialog();
+window.addFolder = () => pywebview.api.add_folder_dialog();
+window.revealSource = id => {
+  const t = STATE.tasks.find(x => x.id === id);
+  if (t && t.path) pywebview.api.open_path(t.path, true);
+};
+window.clearList = () => {
+  if (!STATE.running && STATE.tasks.length){
+    closePlayer();  // 清空列表时若在播放一并关掉
+    pywebview.api.clear_list();
+  }
+};
+window.removeTask = id => {
+  if (PL.tid === id) closePlayer();  // 移除正在播放的任务时关闭播放器
+  pywebview.api.remove_task(id);
+};
+window.retryTask = id => pywebview.api.retry_task(id);
+window.revealFile = id => {
+  const t = STATE.tasks.find(x => x.id === id);
+  if (t && t.out_path) pywebview.api.open_path(t.out_path, true);
+};
+
+/* ---------- 应用内播放器（波形进度条） ---------- */
+const PL = {
+  audio: null, tid: null, peaks: null, loaded: false,
+  rafId: 0
+};
+function audioSrc(p){
+  /* 音频流走 Python 侧的本地 HTTP 服务（127.0.0.1 随机端口，支持 Range），
+     WebView2 禁止 file:// 页面直接加载 file:// 媒体，故不走 file:/// */
+  return pywebview.api.audio_url(p);
+}
+function fmtTime(s){
+  if (!isFinite(s) || s < 0) s = 0;
+  s = Math.round(s);
+  return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0");
+}
+function plBrandColors(){
+  const cs = getComputedStyle(document.documentElement);
+  return [cs.getPropertyValue("--brand").trim() || "#7C5CFC",
+          cs.getPropertyValue("--brand-deep").trim() || "#6a48f0"];
+}
+function drawWave(){
+  const cv = $("plWave");
+  const w = cv.clientWidth, h = cv.clientHeight;
+  if (!w || !h) return;
+  const dpr = window.devicePixelRatio || 1;
+  if (cv.width !== w*dpr || cv.height !== h*dpr){ cv.width = w*dpr; cv.height = h*dpr; }
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+  const peaks = PL.peaks;
+  if (!peaks || !peaks.length){
+    ctx.fillStyle = "rgba(128,128,128,.35)";
+    ctx.fillRect(0, h/2-1, w, 2);
+    return;
+  }
+  const prog = PL.audio && isFinite(PL.audio.duration) && PL.audio.duration > 0
+             ? PL.audio.currentTime / PL.audio.duration : 0;
+  const [brand, deep] = plBrandColors();
+  const grad = ctx.createLinearGradient(0,0,w,0);
+  grad.addColorStop(0, brand); grad.addColorStop(1, deep);
+  const barW = 3, gap = 2, n = Math.max(1, Math.floor(w/(barW+gap)));
+  for (let i = 0; i < n; i++){
+    const p = peaks[Math.min(peaks.length-1, Math.floor(i/n * peaks.length))];
+    const bh = Math.max(2, p * (h - 4));
+    const x = i*(barW+gap);
+    ctx.fillStyle = (i/n) <= prog ? grad : "rgba(128,128,128,.32)";
+    ctx.fillRect(x, (h-bh)/2, barW, bh);
+  }
+}
+function plUpdateToggle(){
+  $("plToggle").textContent = (PL.audio && !PL.audio.paused) ? "⏸" : "▶";
+}
+function plTick(){
+  if (!PL.audio) return;
+  $("plTime").textContent = fmtTime(PL.audio.currentTime) + " / " + fmtTime(PL.audio.duration);
+  drawWave();
+}
+function closePlayer(){
+  if (PL.audio){ PL.audio.pause(); PL.audio.src = ""; }
+  cancelAnimationFrame(PL.rafId);
+  PL.audio = null; PL.tid = null; PL.peaks = null;
+  $("player").classList.add("hide");
+}
+window.playFile = id => {
+  const t = STATE.tasks.find(x => x.id === id);
+  if (!t || !t.path) return;
+  /* 已在播这个文件 → 切换暂停/继续 */
+  if (PL.tid === id && PL.audio){
+    if (PL.audio.paused) PL.audio.play().catch(() => toast("播放失败", true));
+    else PL.audio.pause();
+    plUpdateToggle();
+    return;
+  }
+  if (PL.audio){ PL.audio.pause(); }
+  PL.tid = id;
+  PL.peaks = null;
+  PL.loaded = false;
+  $("player").classList.remove("hide");
+  $("plName").textContent = t.name;
+  $("plSub").textContent = (t.meta && (t.meta.title || t.meta.artist))
+      ? "🎵 " + [t.meta.title, t.meta.artist].filter(Boolean).join(" - ") : "加载中...";
+  $("plTime").textContent = "0:00 / ...";
+  $("plToggle").textContent = "⏸";
+  if (PL.audio) { PL.audio.src = ""; }
+  const a = new Audio();
+  PL.audio = a;
+  a.addEventListener("loadedmetadata", () => { PL.loaded = true; plTick(); });
+  a.addEventListener("ended", () => { plUpdateToggle(); plTick(); });
+  a.addEventListener("pause", plUpdateToggle);
+  a.addEventListener("play", plUpdateToggle);
+  a.addEventListener("error", () => { toast("无法播放该文件（可能已移动或格式不支持）", true); closePlayer(); });
+  /* 音频流 URL 由 Python 本地服务提供（支持 Range 拖动进度） */
+  audioSrc(t.path).then(url => {
+    if (PL.tid !== id || !url) return;
+    a.src = url;
+    a.play().catch(() => { /* 自动播放被拦截时等用户点按钮 */ plUpdateToggle(); });
+  }).catch(() => toast("无法加载音频", true));
+  /* 波形：先画占位，取回真数据再重画 */
+  drawWave();
+  pywebview.api.get_waveform(t.path).then(peaks => {
+    if (PL.tid === id && Array.isArray(peaks) && peaks.length){
+      PL.peaks = peaks;
+      drawWave();
+    }
+  }).catch(() => {});
+  cancelAnimationFrame(PL.rafId);
+  const loop = () => { if (!PL.audio) return; plTick(); PL.rafId = requestAnimationFrame(loop); };
+  PL.rafId = requestAnimationFrame(loop);
+};
+$("plToggle").onclick = () => {
+  if (!PL.audio) return;
+  if (PL.audio.paused) PL.audio.play().catch(() => toast("播放失败", true));
+  else PL.audio.pause();
+};
+$("plClose").onclick = closePlayer;
+$("plWave").onclick = e => {
+  if (!PL.audio || !isFinite(PL.audio.duration)) return;
+  const rect = e.target.getBoundingClientRect();
+  const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+  PL.audio.currentTime = ratio * PL.audio.duration;
+  plTick();
+};
+window.addEventListener("resize", () => { if (PL.audio) drawWave(); });
+
+/* ---------- 颜色风格 ---------- */
+const ACCENTS = [
+  {id:"purple", color:"#7C5CFC", name:"经典紫（Amu 默认）"},
+  {id:"blue",   color:"#2f7cf6", name:"深海蓝"},
+  {id:"cyan",   color:"#06b6d4", name:"清澈青"},
+  {id:"green",  color:"#10b981", name:"翡翠绿"},
+  {id:"rose",   color:"#ec4899", name:"樱花粉"},
+  {id:"orange", color:"#f59e0b", name:"暖阳橙"},
+];
+function applyAccent(id, save){
+  const a = ACCENTS.find(x => x.id === id) || ACCENTS[0];
+  document.documentElement.dataset.accent = a.id;
+  if (save) localStorage.setItem("amu_accent", a.id);
+  document.querySelectorAll(".accent-dot").forEach(d =>
+    d.classList.toggle("active", d.dataset.id === a.id));
+  $("accentName").textContent = a.name;
+  if (PL.audio) drawWave();
+}
+function initAccentUI(){
+  const row = $("accentRow");
+  row.innerHTML = ACCENTS.map(a =>
+    `<div class="accent-dot" data-id="${a.id}" style="background:${a.color}" title="${a.name}"></div>`).join("");
+  row.querySelectorAll(".accent-dot").forEach(d =>
+    d.onclick = () => applyAccent(d.dataset.id, true));
+  applyAccent(localStorage.getItem("amu_accent") || "purple", false);
+  $("accentBtn").onclick = e => {
+    e.stopPropagation();
+    $("accentPop").classList.toggle("open");
+  };
+  document.addEventListener("click", e => {
+    if (!e.target.closest(".theme-wrap"))
+      $("accentPop").classList.remove("open");
+  });
+}
+initAccentUI();
+
+function toast(msg, isErr){
+  const d = document.createElement("div");
+  d.className = "toast-item" + (isErr ? " err" : "");
+  d.textContent = msg;
+  $("toast").appendChild(d);
+  setTimeout(() => d.remove(), 4200);
+}
+function beep(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = 880; g.gain.value = .12;
+    o.start();
+    o.stop(ctx.currentTime + .18);
+  }catch(e){}
+}
+function showDoneToast(info){
+  const parts = [];
+  if (info.success) parts.push(`成功 ${info.success} 个`);
+  if (info.failed) parts.push(`失败 ${info.failed} 个`);
+  if (info.stopped) parts.push(`停止 ${info.stopped} 个`);
+  if (!parts.length) return;
+  toast("✅ 转换完成：" + parts.join("，"), info.failed > 0 && !info.success);
+  beep();
+}
+
+/* ---------- 事件绑定 ---------- */
+$("btnAddFiles").onclick = addFiles;
+$("btnAddFolder").onclick = addFolder;
+$("btnClear").onclick = clearList;
+$("btnStart").onclick = () => STATE.running ? pywebview.api.stop() : pywebview.api.start()
+  .then(r => { if (r && r.ok === false) toast(r.error || "没有等待中的任务", true); });
+$("btnLogout").onclick = () => pywebview.api.gate_logout();
+$("gateLoginBtn").onclick = doGateLogin;
+$("gatePwd").onkeydown = e => { if (e.key === "Enter") doGateLogin(); };
+$("gateEmail").onkeydown = e => { if (e.key === "Enter") $("gatePwd").focus(); };
+$("gateReg").onclick = () => pywebview.api.open_register();
+function doGateLogin(){
+  const btn = $("gateLoginBtn");
+  const email = $("gateEmail").value.trim();
+  const pwd = $("gatePwd").value;
+  if (!email || !pwd){ $("gateErr").textContent = "请输入邮箱和密码"; return; }
+  btn.disabled = true; btn.textContent = "登录中…"; $("gateErr").textContent = "";
+  pywebview.api.gate_login(email, pwd).then(r => {
+    btn.disabled = false; btn.textContent = "登 录";
+    if (r && r.ok){ $("gatePwd").value = ""; toast("✅ 登录成功", false); poll(); }
+    else { $("gateErr").textContent = (r && r.error) || "登录失败，请稍后再试"; }
+  }).catch(() => {
+    btn.disabled = false; btn.textContent = "登 录";
+    $("gateErr").textContent = "登录异常，请检查网络后重试";
+  });
+}
+$("search").oninput = render;
+$("statusFilter").onchange = render;
+document.querySelectorAll("th.sortable").forEach(th => {
+  th.onclick = () => {
+    const k = th.dataset.k;
+    if (sortKey === k){ sortDir = sortDir > 0 ? -1 : 1; }
+    else { sortKey = k; sortDir = 1; }
+    render();
+  };
+});
+$("themeBtn").onclick = toggleTheme;
+
+$("optFormat").onchange = e => pywebview.api.update_settings({format: e.target.value});
+$("optBitrate").onchange = e => pywebview.api.update_settings({bitrate: e.target.value});
+$("optSampleRate").onchange = e => pywebview.api.update_settings({sample_rate: e.target.value});
+$("optChannels").onchange = e => pywebview.api.update_settings({channels: e.target.value});
+$("volMinus").onclick = () => stepVol(-10);
+$("volPlus").onclick = () => stepVol(10);
+function stepVol(d){
+  const v = Math.max(10, Math.min(200, (STATE.settings.volume || 100) + d));
+  $("volVal").textContent = v + "%";
+  pywebview.api.update_settings({volume: v});
+}
+$("speedMinus").onclick = () => {
+  const v = Math.max(0.25, Math.round(((STATE.settings.speed||1) - 0.05)*100)/100);
+  $("speedVal").textContent = v.toFixed(2) + "x";
+  pywebview.api.update_settings({speed: v});
+};
+$("speedPlus").onclick = () => {
+  const v = Math.min(4.0, Math.round(((STATE.settings.speed||1) + 0.05)*100)/100);
+  $("speedVal").textContent = v.toFixed(2) + "x";
+  pywebview.api.update_settings({speed: v});
+};
+$("workersMinus").onclick = () => stepWorkers(-1);
+$("workersPlus").onclick = () => stepWorkers(1);
+function stepWorkers(d){
+  const cur = STATE.settings.workers;
+  let v;
+  if (cur === "自动") v = d < 0 ? 8 : "自动";
+  else {
+    v = Math.max(1, Math.min(8, cur + d));
+    if (v === 8 && d > 0) v = "自动";
+  }
+  pywebview.api.update_settings({workers: v});
+}
+$("chkSourceDir").onchange = e => pywebview.api.update_settings({use_source_dir: e.target.checked});
+$("chkNotify").onchange = e => pywebview.api.update_settings({notify_done: e.target.checked});
+$("chkAutoOpen").onchange = e => pywebview.api.update_settings({auto_open_folder: e.target.checked});
+$("outDirPath").onclick = editOutDir;
+function editOutDir(){
+  const span = $("outDirPath");
+  const cur = STATE.settings.output_dir || "";
+  const input = document.createElement("input");
+  input.id = "outDirInput";
+  input.value = cur;
+  input.style.cssText = "flex:1;font-size:12px;border:none;outline:none;background:transparent;color:var(--txt);min-width:0";
+  span.replaceWith(input);
+  input.focus(); input.select();
+  const commit = ok => {
+    const ns = document.createElement("span");
+    ns.className = "path"; ns.id = "outDirPath";
+    ns.title = cur;
+    input.replaceWith(ns);
+    $("outDirPath").onclick = editOutDir;
+    if (ok && input.value.trim() && input.value.trim() !== cur)
+      pywebview.api.update_settings({output_dir: input.value.trim()});
+  };
+  input.onblur = () => commit(true);
+  input.onkeydown = e => {
+    if (e.key === "Enter") commit(true);
+    if (e.key === "Escape") commit(false);
+  };
+}
+$("btnOpenOut").onclick = () => STATE.settings.output_dir && pywebview.api.open_path(STATE.settings.output_dir);
+
+/* ---------- 深色模式 ---------- */
+function toggleTheme(){
+  const html = document.documentElement;
+  const dark = html.dataset.theme !== "dark";
+  html.dataset.theme = dark ? "dark" : "light";
+  $("themeBtn").textContent = dark ? "☀️" : "🌙";
+  localStorage.setItem("amu_theme", dark ? "dark" : "light");
+}
+(function initTheme(){
+  if (localStorage.getItem("amu_theme") === "dark"){
+    document.documentElement.dataset.theme = "dark";
+    $("themeBtn").textContent = "☀️";
+  }
+})();
+
+/* ---------- 拖拽 ---------- */
+const dropZone = $("dropZone");
+let dragDepth = 0;
+document.addEventListener("dragenter", e => { e.preventDefault(); dragDepth++; dropZone.classList.add("dragging"); });
+document.addEventListener("dragleave", e => { e.preventDefault(); if (--dragDepth <= 0){ dragDepth = 0; dropZone.classList.remove("dragging"); } });
+document.addEventListener("dragover", e => e.preventDefault());
+document.addEventListener("drop", e => {
+  e.preventDefault(); dragDepth = 0; dropZone.classList.remove("dragging");
+  const files = [...(e.dataTransfer.files || [])].map(f => f.path).filter(Boolean);
+  if (files.length) pywebview.api.add_dropped_paths(files);
+});
+
+/* ---------- 轮询刷新 ---------- */
+function apiReady(){
+  try { return window.pywebview && pywebview.api &&
+        typeof pywebview.api.get_state === "function"; }
+  catch(e){ return false; }
+}
+function poll(){
+  if (apiReady()){
+    pywebview.api.get_state().then(s => { STATE = s; render(); })
+      .catch(() => {});
+  }
+}
+function boot(){
+  pywebview.api.get_state().then(s => {
+    STATE = s;
+    initOptions(s.options);
+    render();
+    setInterval(poll, 500);
+  }).catch(() => setTimeout(boot, 200));
+}
+window.addEventListener("DOMContentLoaded", () => {
+  /* pywebview.api 的方法注入晚于 window.pywebview 出现，必须等方法真正可用 */
+  window.addEventListener("pywebviewready", boot);
+  let tries = 0;
+  const t = setInterval(() => {
+    tries++;
+    if (apiReady()){ clearInterval(t); boot(); }
+    else if (tries > 150){ clearInterval(t); }
+  }, 100);
+});
+</script>
+</body>
+</html>
