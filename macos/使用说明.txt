@@ -1,0 +1,13 @@
+Amu Music 音频转换器 v1.0.0（积分版）— macOS
+
+1. 请按芯片选择安装包：
+   Apple M1/M2/M3/M4/M5 系列使用 AppleSilicon 版；Intel Mac 使用 Intel 版。
+2. 解压 ZIP，把“AmuMusic Audio Converter.app”拖入“应用程序”。
+3. 首次打开若被系统阻止，请右键应用选择“打开”；也可到
+   “系统设置 → 隐私与安全性”点击“仍要打开”。
+4. 使用 Amu 账号登录。每成功转换 1 个音频消耗 10 积分；失败不扣积分。
+5. FFmpeg 和 FFprobe 已内置，无需安装 Python、Homebrew 或其他运行环境。
+
+系统要求：macOS 14 或更高版本。
+安全说明：本包已做临时（ad-hoc）签名，尚未做 Apple Developer ID 公证。
+登录信息优先保存在 macOS 钥匙串；首次使用时系统可能请求钥匙串权限。
