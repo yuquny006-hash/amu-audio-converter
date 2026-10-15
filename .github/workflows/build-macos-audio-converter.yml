@@ -1,0 +1,37 @@
+name: Build Amu Audio Converter macOS
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            artifact: AmuMusic-AudioConverter-macOS-AppleSilicon
+          - runner: macos-15-intel
+            artifact: AmuMusic-AudioConverter-macOS-Intel
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.9.2'
+      - name: Build and verify native application
+        run: bash macos/build_macos.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          compression-level: 0
+          if-no-files-found: error
+          path: |
+            dist/AmuMusic音频转换器-macOS-*.zip
+            dist/SHA256-*.txt
+            dist/使用说明.txt
+            dist/dependencies-*.txt
+            dist/smoke-*.json
