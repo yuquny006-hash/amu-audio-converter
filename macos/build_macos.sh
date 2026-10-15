@@ -12,9 +12,10 @@ esac
 export MACOSX_DEPLOYMENT_TARGET=14.0
 
 uv python install 3.12
-PY="$(uv python find --managed-python 3.12)"
-uv pip install --python "$PY" -r requirements-macos.txt
-uv pip check --python "$PY"
+uv venv --python 3.12 .venv
+PY=".venv/bin/python"
+uv pip install -r requirements-macos.txt
+uv pip check
 "$PY" -m unittest discover -s tests -v
 "$PY" -c 'import edition; assert edition.EDITION == "points"'
 
@@ -50,7 +51,7 @@ codesign --verify --deep --strict "$APP"
 
 "$PY" macos/smoke_bundle.py "$APP" "$ARCH" "dist/smoke-${ARCH}.json"
 cp macos/使用说明.txt dist/使用说明.txt
-uv pip freeze --python "$PY" > "dist/dependencies-${ARCH}.txt"
+uv pip freeze > "dist/dependencies-${ARCH}.txt"
 ZIP="dist/AmuMusic音频转换器-macOS-${LABEL}.zip"
 ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
 (cd dist && shasum -a 256 "$(basename "$ZIP")" > "SHA256-${ARCH}.txt")
